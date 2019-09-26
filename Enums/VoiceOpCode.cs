@@ -1,6 +1,6 @@
-namespace Vysn.Voice.Entities
+namespace Vysn.Voice.Enums
 {
-    public enum GatewayOperationType
+    internal enum VoiceOpCode
     {
         /// <summary>
         /// Begin a voice websocket connection

@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace Vysn.Voice.Converters
 {
-    public sealed class StringToUlongConverter : JsonConverter<ulong>
+    internal sealed class StringToUlongConverter : JsonConverter<ulong>
     {
         /// <inheritdoc />
         public override ulong Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
