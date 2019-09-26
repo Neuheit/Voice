@@ -1,7 +1,38 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
-  </PropertyGroup>
+    <PropertyGroup>
+        <VersionPrefix>0.1</VersionPrefix>
+        <VersionSuffix>alpha</VersionSuffix>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <AssemblyName>Vysn.Voice</AssemblyName>
+        <RootNamespace>Vysn.Voice</RootNamespace>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <Title>Vysn.Voice</Title>
+        <Authors>Yucked</Authors>
+        <Copyright>2018 - 2019 Yucked. All rights reserved.</Copyright>
+        <PackageIconUrl>https://i.imgur.com/lA1HyyI.png</PackageIconUrl>
+        <PackageTags>Lavalink, Wrapper, Discord, Discord.NET, Music, Yucked</PackageTags>
+        <PackageProjectUrl>https://github.com/Vysn/Voice</PackageProjectUrl>
+        <Description>🎶 - Wrapper around Discord's voice gateway connection. Aiming to be plug and play.</Description>
+        <PackageReleaseNotes>
+            - Added Gateway payloads
+
+            - Wrote String -&gt; Ulong converter
+
+            - Working on VoiceGatewayClient
+
+            - Need to figure out voice state and server update payload.
+        </PackageReleaseNotes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Folder Include="EventArgs"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Socks" Version="1.4.0"/>
+    </ItemGroup>
 
 </Project>
