@@ -1,13 +1,13 @@
 using System;
 using System.Text.Json.Serialization;
-using Vysn.Voice.Entities;
+using Vysn.Voice.Enums;
 
 namespace Vysn.Voice.Payloads
 {
     internal sealed class BaseGatewayPayload
     {
         [JsonPropertyName("op")]
-        public GatewayOperationType Op { get; }
+        public VoiceOpCode Op { get; }
 
         [JsonPropertyName("d")]
         public object Data { get; set; }
@@ -16,14 +16,14 @@ namespace Vysn.Voice.Payloads
         {
             Op = Data switch
             {
-                HelloPayload _              => GatewayOperationType.Hello,
-                ResumeConnectionPayload _   => GatewayOperationType.Resume,
-                ResumedPayload _            => GatewayOperationType.Resumed,
-                SelectProtocolPayload _     => GatewayOperationType.SelectProtocol,
-                SessionDescriptionPayload _ => GatewayOperationType.SessionDescription,
-                SpeakingPayload _           => GatewayOperationType.Speaking,
-                VoiceIdentifyPayload _      => GatewayOperationType.Identify,
-                VoiceReadyPayload _         => GatewayOperationType.Ready,
+                HelloPayload _              => VoiceOpCode.Hello,
+                ResumeConnectionPayload _   => VoiceOpCode.Resume,
+                ResumedPayload _            => VoiceOpCode.Resumed,
+                SelectProtocolPayload _     => VoiceOpCode.SelectProtocol,
+                SessionDescriptionPayload _ => VoiceOpCode.SessionDescription,
+                SpeakingPayload _           => VoiceOpCode.Speaking,
+                VoiceIdentifyPayload _      => VoiceOpCode.Identify,
+                VoiceReadyPayload _         => VoiceOpCode.Ready,
                 _                           => throw new ArgumentException("Failed to match data to operation type!")
             };
         }
