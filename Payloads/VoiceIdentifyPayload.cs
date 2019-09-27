@@ -1,15 +1,15 @@
 using System.Text.Json.Serialization;
-using Vysn.Voice.Converters;
+using Vysn.Comons;
 
 namespace Vysn.Voice.Payloads
 {
     internal struct VoiceIdentifyPayload
     {
-        [JsonPropertyName("server_id"), JsonConverter(typeof(StringToUlongConverter))]
-        public ulong ServerId { get; set; }
+        [JsonPropertyName("server_id")]
+        public Snowflake ServerId { get; set; }
 
-        [JsonPropertyName("user_id"), JsonConverter(typeof(StringToUlongConverter))]
-        public ulong UserId { get; set; }
+        [JsonPropertyName("user_id")]
+        public Snowflake UserId { get; set; }
 
         [JsonPropertyName("session_id")]
         public string SessionId { get; set; }
