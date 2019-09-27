@@ -3,9 +3,11 @@
     <PropertyGroup>
         <VersionPrefix>0.1</VersionPrefix>
         <VersionSuffix>alpha</VersionSuffix>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
         <AssemblyName>Vysn.Voice</AssemblyName>
         <RootNamespace>Vysn.Voice</RootNamespace>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -13,18 +15,9 @@
         <Authors>Yucked</Authors>
         <Copyright>2018 - 2019 Yucked. All rights reserved.</Copyright>
         <PackageIconUrl>https://img.icons8.com/ios-filled/100/000000/audio-wave.png</PackageIconUrl>
-        <PackageTags>Lavalink, Wrapper, Discord, Discord.NET, Music, Yucked</PackageTags>
+        <PackageTags>Yucked, Discord, Wrapper, Discord-Wrapper, Discord.NET, DSharpPlus, Discord Library</PackageTags>
         <PackageProjectUrl>https://github.com/Vysn/Voice</PackageProjectUrl>
         <Description>🎶 - Wrapper around Discord's voice gateway connection. Aiming to be plug and play.</Description>
-        <PackageReleaseNotes>
-            - Added Gateway payloads
-
-            - Wrote String -&gt; Ulong converter
-
-            - Working on VoiceGatewayClient
-
-            - Need to figure out voice state and server update payload.
-        </PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>
@@ -33,6 +26,10 @@
 
     <ItemGroup>
         <PackageReference Include="Socks" Version="1.4.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Commons\Commons.csproj" />
     </ItemGroup>
 
 </Project>

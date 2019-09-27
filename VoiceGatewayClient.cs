@@ -3,9 +3,9 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Socks;
 using Socks.EventArgs;
+using Vysn.Comons;
 using Vysn.Voice.Enums;
 using Vysn.Voice.Payloads;
-using Vysn.Voice.Responses;
 
 namespace Vysn.Voice
 {
@@ -14,69 +14,35 @@ namespace Vysn.Voice
     /// </summary>
     public sealed class VoiceGatewayClient : IAsyncDisposable
     {
-        private ClientSock _clientSock;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnClientDisconnect;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnHeartbeat;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnHeartbeatACK;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnHello;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnIdentify;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnSelectProtocol;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnReady;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnSessionDescription;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnSpeaking;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnResume;
-        
-        /// <summary>
-        /// 
-        /// </summary>
-        public event Func<object> OnResumed;
-
         /// <summary>
         /// 
         /// </summary>
         public ConnectionState State { get; private set; }
 
-        public async Task EstablishConnectionAsync(VoiceServerUpdateData serverData)
+        /// <summary>
+        /// 
+        /// </summary>
+        public event Func<LogMessage, Task> OnLog;
+
+        private ClientSock _clientSock;
+        private readonly TimeSpan _connectionTimeout;
+        private readonly TaskCompletionSource<bool> _readySignal;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public VoiceGatewayClient()
+        {
+            _connectionTimeout = TimeSpan.FromSeconds(30);
+            _readySignal = new TaskCompletionSource<bool>();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="serverData"></param>
+        /// <returns></returns>
+        public async Task EstablishConnectionAsync(dynamic serverData)
         {
             var chopped = serverData.Endpoint.AsSpan(0, serverData.Endpoint.Length - 3)
                 .ToString();
@@ -93,6 +59,14 @@ namespace Vysn.Voice
 
             await _clientSock.ConnectAsync()
                 .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task SendOpusAudioAsync()
+        {
         }
 
         /// <inheritdoc />
@@ -151,6 +125,7 @@ namespace Vysn.Voice
 
                 case VoiceOpCode.Ready:
                     State = ConnectionState.Ready;
+                    _readySignal.TrySetResult(true);
                     break;
 
                 case VoiceOpCode.SessionDescription:
