@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using Vysn.Comons;
+using Vysn.Commons;
 
 namespace Vysn.Voice.Payloads
 {
