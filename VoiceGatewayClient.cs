@@ -1,18 +1,17 @@
 ﻿using System;
-using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Socks;
-using Socks.EventArgs;
 using Vysn.Commons;
 using Vysn.Voice.Enums;
-using Vysn.Voice.Payloads;
+using Vysn.Voice.Packets;
 
 namespace Vysn.Voice
 {
     /// <summary>
     /// 
     /// </summary>
-    public sealed class VoiceGatewayClient : IAsyncDisposable
+    public partial class VoiceGatewayClient : IAsyncDisposable
     {
         /// <summary>
         /// 
@@ -25,8 +24,9 @@ namespace Vysn.Voice
         public event Func<LogMessage, Task> OnLog;
 
         private ClientSock _clientSock;
+        private ConnectionPacket _connectionPacket;
         private readonly TimeSpan _connectionTimeout;
-        private readonly TaskCompletionSource<bool> _readySignal;
+        private readonly CancellationTokenSource _connectionSource;
 
         /// <summary>
         /// 
@@ -34,17 +34,18 @@ namespace Vysn.Voice
         public VoiceGatewayClient()
         {
             _connectionTimeout = TimeSpan.FromSeconds(30);
-            _readySignal = new TaskCompletionSource<bool>();
+            _connectionSource = new CancellationTokenSource();
         }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="serverData"></param>
+        /// <param name="packet"></param>
         /// <returns></returns>
-        public async Task EstablishConnectionAsync(dynamic serverData)
+        public async Task RunAsync(ConnectionPacket packet)
         {
-            var chopped = serverData.Endpoint.AsSpan(0, serverData.Endpoint.Length - 3)
+            _connectionPacket = packet;
+            var chopped = packet.Endpoint.AsSpan(0, packet.Endpoint.Length - 3)
                 .ToString();
 
             var endpoint = new Endpoint(chopped, true)
@@ -57,8 +58,16 @@ namespace Vysn.Voice
             _clientSock.OnConnected += OnConnectedAsync;
             _clientSock.OnDisconnected += OnDisconnectedAsync;
 
-            await _clientSock.ConnectAsync()
+            _ = _clientSock.ConnectAsync()
                 .ConfigureAwait(false);
+
+            var isSuccess = SpinWait.SpinUntil(() => State == ConnectionState.Connected, _connectionTimeout);
+
+            if (!isSuccess)
+            {
+                await DisposeAsync();
+                throw new TimeoutException("Failed to connect after waiting for 30 seconds.");
+            }
         }
 
         /// <summary>
@@ -74,75 +83,6 @@ namespace Vysn.Voice
         {
             await _clientSock.DisposeAsync()
                 .ConfigureAwait(false);
-        }
-
-        private async Task OnConnectedAsync()
-        {
-            State = ConnectionState.Connected;
-
-            var payload = new BaseGatewayPayload
-            {
-                Data = new VoiceIdentifyPayload
-                {
-                }
-            };
-
-            await _clientSock.SendAsync(payload)
-                .ConfigureAwait(false);
-        }
-
-        private async Task OnDisconnectedAsync(DisconnectEventArgs arg)
-        {
-            State = ConnectionState.Disconnected;
-        }
-
-        private async Task OnReceiveAsync(ReceivedEventArgs arg)
-        {
-            if (arg.DataSize == 0)
-                return;
-
-            var payload = JsonSerializer.Deserialize<BaseGatewayPayload>(arg.Data.Span);
-
-            switch (payload.Op)
-            {
-                case VoiceOpCode.ClientDisconnect:
-                    break;
-
-                case VoiceOpCode.Heartbeat:
-                    break;
-
-                case VoiceOpCode.HeartbeatACK:
-                    break;
-
-                case VoiceOpCode.Hello:
-                    break;
-
-                case VoiceOpCode.Identify:
-                    break;
-
-                case VoiceOpCode.SelectProtocol:
-                    break;
-
-                case VoiceOpCode.Ready:
-                    State = ConnectionState.Ready;
-                    _readySignal.TrySetResult(true);
-                    break;
-
-                case VoiceOpCode.SessionDescription:
-                    break;
-
-                case VoiceOpCode.Speaking:
-                    break;
-
-                case VoiceOpCode.Resume:
-                    break;
-
-                case VoiceOpCode.Resumed:
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException($"Unknown op code: {payload.Op}");
-            }
         }
     }
 }
