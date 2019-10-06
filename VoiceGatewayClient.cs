@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Socks;
@@ -27,6 +28,7 @@ namespace Vysn.Voice
         private ConnectionPacket _connectionPacket;
         private readonly TimeSpan _connectionTimeout;
         private readonly CancellationTokenSource _connectionSource;
+        private readonly UdpClient _udpClient;
 
         /// <summary>
         /// 
@@ -35,6 +37,7 @@ namespace Vysn.Voice
         {
             _connectionTimeout = TimeSpan.FromSeconds(30);
             _connectionSource = new CancellationTokenSource();
+            _udpClient = new UdpClient();
         }
 
         /// <summary>
@@ -66,8 +69,11 @@ namespace Vysn.Voice
             if (!isSuccess)
             {
                 await DisposeAsync();
+                OnLog?.Invoke(new LogMessage(nameof(Voice), LogLevel.Exception, "Connection timed out."));
                 throw new TimeoutException("Failed to connect after waiting for 30 seconds.");
             }
+
+            OnLog?.Invoke(new LogMessage(nameof(Voice), LogLevel.Information, "Connection established."));
         }
 
         /// <summary>

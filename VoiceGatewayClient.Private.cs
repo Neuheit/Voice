@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Socks;
 using Socks.EventArgs;
+using Vysn.Commons;
 using Vysn.Voice.Enums;
 using Vysn.Voice.Payloads;
 
@@ -35,7 +36,7 @@ namespace Vysn.Voice
         {
             while (!_connectionSource.IsCancellationRequested)
             {
-                var payload = new BaseGatewayPayload
+                var payload = new GatewayPayload<long>
                 {
                     Data = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                 };
@@ -52,7 +53,7 @@ namespace Vysn.Voice
         {
             State = ConnectionState.Connected;
 
-            var payload = new BaseGatewayPayload
+            var payload = new GatewayPayload<VoiceIdentifyPayload>
             {
                 Data = new VoiceIdentifyPayload
                 {
@@ -65,10 +66,15 @@ namespace Vysn.Voice
 
             await _clientSock.SendAsync(payload)
                 .ConfigureAwait(false);
+
+            OnLog?.Invoke(new LogMessage(nameof(Vysn.Voice), LogLevel.Debug, "Sent identify payload."));
         }
 
         private async Task OnDisconnectedAsync(DisconnectEventArgs arg)
         {
+            OnLog?.Invoke(new LogMessage(nameof(Vysn.Voice), LogLevel.Warning,
+                "Voice connection dropped."));
+
             State = ConnectionState.Disconnected;
             if (arg.DisconnectType == DisconnectType.Graceful)
                 return;
@@ -82,7 +88,9 @@ namespace Vysn.Voice
             if (arg.DataSize == 0)
                 return;
 
-            var payload = JsonSerializer.Deserialize<BaseGatewayPayload>(arg.Data.Span);
+            OnLog?.Invoke(new LogMessage(nameof(Voice), LogLevel.Debug, arg.Raw));
+
+            var payload = JsonSerializer.Deserialize<GatewayPayload<object>>(arg.Data.Span);
 
             switch (payload.Op)
             {
@@ -96,23 +104,46 @@ namespace Vysn.Voice
                     break;
 
                 case VoiceOpCode.Hello:
-                    var helloPayload = JsonSerializer.Deserialize<HelloPayload>(arg.Data.Span);
-                    _ = HandleHeartbeatAsync((int) (helloPayload.HeartbeatInterval * 0.75));
-                    break;
-
-                case VoiceOpCode.Identify:
-                    break;
-
-                case VoiceOpCode.SelectProtocol:
+                    var helloPayload = JsonSerializer.Deserialize<GatewayPayload<HelloPayload>>(arg.Data.Span);
+                    _ = HandleHeartbeatAsync((int) (helloPayload.Data.HeartbeatInterval * 0.75));
                     break;
 
                 case VoiceOpCode.Ready:
                     State = ConnectionState.Ready;
-                    var readyPayload = JsonSerializer.Deserialize<VoiceReadyPayload>(arg.Data.Span);
+                    var readyPayload = JsonSerializer.Deserialize<GatewayPayload<VoiceReadyPayload>>(arg.Data.Span);
+                    _udpClient.Connect(readyPayload.Data.Address, readyPayload.Data.Port);
 
+                    var selectPayload = new GatewayPayload<SelectProtocolPayload>
+                    {
+                        Data = new SelectProtocolPayload
+                        {
+                            Protocol = "udp",
+                            Data = new SelectProtocolData
+                            {
+                                Address = readyPayload.Data.Address,
+                                Port = readyPayload.Data.Port,
+                                Mode = "xsalsa20_poly1305"
+                            }
+                        }
+                    };
+
+                    await _clientSock.SendAsync(selectPayload)
+                        .ConfigureAwait(false);
                     break;
 
                 case VoiceOpCode.SessionDescription:
+                    var sessionPayload = JsonSerializer
+                        .Deserialize<GatewayPayload<SessionDescriptionPayload>>(arg.Data.Span);
+
+                    if (sessionPayload.Data.Mode != "xsalsa20_poly1305")
+                    {
+                        OnLog?.Invoke(new LogMessage(nameof(Vysn.Voice), LogLevel.Exception,
+                            $"{sessionPayload.Data.Mode} isn't handled by Vysn."));
+
+                        return;
+                    }
+
+
                     break;
 
                 case VoiceOpCode.Speaking:

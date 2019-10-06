@@ -4,15 +4,15 @@ using Vysn.Voice.Enums;
 
 namespace Vysn.Voice.Payloads
 {
-    internal sealed class BaseGatewayPayload
+    internal sealed class GatewayPayload<T>
     {
         [JsonPropertyName("op")]
         public VoiceOpCode Op { get; }
 
         [JsonPropertyName("d")]
-        public object Data { get; set; }
+        public T Data { get; set; }
 
-        public BaseGatewayPayload()
+        public GatewayPayload()
         {
             Op = Data switch
             {
