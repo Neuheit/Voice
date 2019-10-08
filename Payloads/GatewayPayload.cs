@@ -16,6 +16,7 @@ namespace Vysn.Voice.Payloads
         {
             Op = Data switch
             {
+                long _                      => VoiceOpCode.Heartbeat,
                 HelloPayload _              => VoiceOpCode.Hello,
                 ResumeConnectionPayload _   => VoiceOpCode.Resume,
                 ResumedPayload _            => VoiceOpCode.Resumed,

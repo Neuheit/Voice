@@ -1,11 +1,12 @@
 using System.Text.Json.Serialization;
 using Vysn.Commons;
+using Vysn.Commons.Converters;
 
 namespace Vysn.Voice.Payloads
 {
     internal struct ResumeConnectionPayload
     {
-        [JsonPropertyName("server_id")]
+        [JsonPropertyName("server_id"), JsonConverter(typeof(SnowflakeConverter))]
         public Snowflake ServerId { get; set; }
 
         [JsonPropertyName("session_id")]
