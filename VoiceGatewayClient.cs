@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Sockets;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Socks;
@@ -48,6 +49,8 @@ namespace Vysn.Voice
         public async Task RunAsync(ConnectionPacket packet)
         {
             _connectionPacket = packet;
+            OnLog?.OnDebug(JsonSerializer.Serialize(_connectionPacket));
+
             var chopped = packet.Endpoint.AsSpan(0, packet.Endpoint.Length - 3)
                 .ToString();
 
@@ -69,11 +72,11 @@ namespace Vysn.Voice
             if (!isSuccess)
             {
                 await DisposeAsync();
-                OnLog?.Invoke(new LogMessage(nameof(Voice), LogLevel.Exception, "Connection timed out."));
+                OnLog?.OnException($"Guild {_connectionPacket.GuildId} connection timed out after 30 seconds.");
                 throw new TimeoutException("Failed to connect after waiting for 30 seconds.");
             }
 
-            OnLog?.Invoke(new LogMessage(nameof(Voice), LogLevel.Information, "Connection established."));
+            OnLog?.OnDebug($"Guild {_connectionPacket.GuildId} voice connection established.");
         }
 
         /// <summary>
