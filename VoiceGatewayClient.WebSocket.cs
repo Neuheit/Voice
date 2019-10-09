@@ -47,6 +47,8 @@ namespace Vysn.Voice
                     _audioEncoder.SetSecret(sessionPayload.SecretKey);
                     _ = SendKeepAliveAsync()
                         .ConfigureAwait(false);
+
+                    State = ConnectionState.Ready;
                     break;
 
                 case VoiceOpCode.Resume:

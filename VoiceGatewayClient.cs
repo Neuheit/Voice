@@ -69,9 +69,8 @@ namespace Vysn.Voice
             _ = _clientSock.ConnectAsync()
                 .ConfigureAwait(false);
 
-            var isSuccess = SpinWait.SpinUntil(() => State == ConnectionState.Connected, _connectionTimeout);
-
-            if (!isSuccess)
+            var isConnected = SpinWait.SpinUntil(() => State == ConnectionState.Connected, _connectionTimeout);
+            if (!isConnected)
             {
                 await DisposeAsync();
                 OnLog?.OnException($"Guild {_connectionPacket.GuildId} connection timed out after 30 seconds.");
@@ -79,6 +78,12 @@ namespace Vysn.Voice
             }
 
             OnLog?.OnDebug($"Guild {_connectionPacket.GuildId} voice connection established.");
+
+            var isReady = SpinWait.SpinUntil(() => State == ConnectionState.Ready, _connectionTimeout);
+            if (isReady)
+            {
+                _ = _audioEncoder.TransmitPacketsAsync(_connectionSource);
+            }
         }
 
         /// <summary>

@@ -38,6 +38,7 @@ namespace Vysn.Voice
             while (!_connectionSource.IsCancellationRequested)
             {
                 Volatile.Write(ref keepAlive, keepAlive + 1);
+                
                 var packet = new byte[8];
                 BinaryPrimitives.WriteUInt64LittleEndian(packet, keepAlive);
 
