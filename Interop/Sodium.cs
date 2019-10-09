@@ -17,24 +17,14 @@ namespace Vysn.Voice.Interop
         /// <summary>
         /// 
         /// </summary>
-        public static readonly int MacSize
+        private static readonly int MacSize
             = (int) SecretBoxMacSize();
 
         /// <summary>
         /// 
         /// </summary>
-        public static readonly int KeySize
+        private static readonly int KeySize
             = (int) SecretBoxKeySize();
-
-        [DllImport("sodium", EntryPoint = "crypto_secretbox_easy", CallingConvention = CallingConvention.Cdecl)]
-        private static extern unsafe int SecretboxEasy(byte* buffer, byte* message, ulong messageLength, byte* nonce,
-            byte* key);
-
-        [DllImport("sodium", EntryPoint = "crypto_secretbox_open_easy", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int SecretboxOpenEasy(ref byte m, in byte c, int clen, in byte n, in byte k);
-
-        [DllImport("sodium", EntryPoint = "randombytes_buf", CallingConvention = CallingConvention.Cdecl)]
-        private static extern void RandomBufferBytes(ref byte buf, int size);
 
         [DllImport("sodium", CallingConvention = CallingConvention.Cdecl,
             EntryPoint = "crypto_secretbox_xsalsa20poly1305_noncebytes")]
@@ -51,18 +41,40 @@ namespace Vysn.Voice.Interop
         [return: MarshalAs(UnmanagedType.SysUInt)]
         private static extern UIntPtr SecretBoxKeySize();
 
-        private static unsafe int Encrypt(ReadOnlySpan<byte> source, Span<byte> target, ReadOnlySpan<byte> key,
-            ReadOnlySpan<byte> nonce)
+        [DllImport("sodium", EntryPoint = "crypto_secretbox_easy", CallingConvention = CallingConvention.Cdecl)]
+        private static extern int SecretboxEasy(ref byte cip, byte msg, ulong msgLen, byte nonce, byte key);
+
+        [DllImport("sodium", EntryPoint = "randombytes_buf", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void RandomBytesBuffer(ref byte buf, int size);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="destination"></param>
+        /// <param name="audioData"></param>
+        /// <param name="key"></param>
+        /// <param name="nonce"></param>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public static void Encrypt(Span<byte> destination, Span<byte> audioData, ReadOnlySpan<byte> key,
+            Span<byte> nonce)
         {
-            int status;
+            if (key.Length != KeySize)
+                throw new ArgumentOutOfRangeException(nameof(key),
+                    "Key size is not the same as Sodium key size.");
 
-            fixed (byte* sourcePtr = &source.GetPinnableReference())
-            fixed (byte* targetPtr = &target.GetPinnableReference())
-            fixed (byte* keyPtr = &key.GetPinnableReference())
-            fixed (byte* noncePtr = &nonce.GetPinnableReference())
-                status = SecretboxEasy(targetPtr, sourcePtr, (ulong) source.Length, noncePtr, keyPtr);
+            if (nonce.Length != NonceSize)
+                throw new ArgumentOutOfRangeException(nameof(nonce),
+                    "Nonce size is not the same as Sodium nonce size.");
 
-            return status;
+            if (audioData.Length < destination.Length + MacSize)
+                throw new ArgumentOutOfRangeException(nameof(audioData),
+                    "Source length is not the same as destination + MacSize.");
+
+            var status = SecretboxEasy(ref destination.GetPinnableReference(), audioData.GetPinnableReference(),
+                (ulong) audioData.Length, nonce.GetPinnableReference(), key.GetPinnableReference());
+
+            if (status != 0)
+                throw new Exception($"Sodium failed to encrypt with the following error: {status}");
         }
 
         /// <summary>
@@ -70,7 +82,7 @@ namespace Vysn.Voice.Interop
         /// </summary>
         /// <param name="buffer"></param>
         public static void GenerateNonce(Span<byte> buffer)
-            => RandomBufferBytes(ref buffer.GetPinnableReference(), buffer.Length);
+            => RandomBytesBuffer(ref buffer.GetPinnableReference(), buffer.Length);
 
         /// <summary>
         /// 
