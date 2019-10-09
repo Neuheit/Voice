@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Threading;
 using System.Threading.Tasks;
+using Vysn.Voice.Enums;
 using Vysn.Voice.Payloads;
 
 namespace Vysn.Voice
@@ -12,6 +13,7 @@ namespace Vysn.Voice
             _udpClient.Connect(readyPayload.Address, readyPayload.Port);
             var selectPayload = new GatewayPayload<SelectProtocolPayload>
             {
+                Op = VoiceOpCode.SelectProtocol,
                 Data = new SelectProtocolPayload
                 {
                     Protocol = "udp",
@@ -32,7 +34,7 @@ namespace Vysn.Voice
         {
             OnLog?.OnDebug("Started UDP keep alive task.");
             var keepAlive = (ulong) 0;
-            
+
             while (!_connectionSource.IsCancellationRequested)
             {
                 Volatile.Write(ref keepAlive, keepAlive + 1);

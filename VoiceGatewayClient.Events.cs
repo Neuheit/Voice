@@ -18,6 +18,7 @@ namespace Vysn.Voice
             State = ConnectionState.Connected;
             var payload = new GatewayPayload<VoiceIdentifyPayload>
             {
+                Op = VoiceOpCode.Identify,
                 Data = new VoiceIdentifyPayload
                 {
                     ServerId = _connectionPacket.GuildId,
@@ -55,6 +56,10 @@ namespace Vysn.Voice
                     switch (socketException.ErrorCode)
                     {
                         case 4014:
+                            OnLog?.OnException(
+                                $"Guild {_connectionPacket.GuildId} deleted voice channel I was connected to.");
+                            return false;
+
                         case 4015:
                             OnLog?.OnWarning($"Guild {_connectionPacket.GuildId} voice connection can be resumed.");
                             return true;

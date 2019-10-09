@@ -19,15 +19,6 @@ namespace Vysn.Voice
 
             switch (payload.Op)
             {
-                case VoiceOpCode.ClientDisconnect:
-                    break;
-
-                case VoiceOpCode.Heartbeat:
-                    break;
-
-                case VoiceOpCode.HeartbeatACK:
-                    break;
-
                 case VoiceOpCode.Hello:
                     var helloPayload = arg.DeserializePayload<HelloPayload>();
                     _ = HandleHeartbeatAsync(helloPayload.HeartbeatInterval);
@@ -52,9 +43,6 @@ namespace Vysn.Voice
                         .ConfigureAwait(false);
                     break;
 
-                case VoiceOpCode.Speaking:
-                    break;
-
                 case VoiceOpCode.Resume:
                     break;
 
@@ -69,12 +57,13 @@ namespace Vysn.Voice
         private async Task HandleHeartbeatAsync(long interval)
         {
             OnLog?.OnDebug("Started WebSocket hearbeat handling task.");
-            
+
             var delay = (int) (interval * 0.75);
             while (!_connectionSource.IsCancellationRequested)
             {
                 var payload = new GatewayPayload<long>
                 {
+                    Op = VoiceOpCode.Heartbeat,
                     Data = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                 };
 
