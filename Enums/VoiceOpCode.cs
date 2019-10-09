@@ -33,11 +33,6 @@ namespace Vysn.Voice.Enums
         Speaking = 5,
 
         /// <summary>
-        /// Sent immediately following a received client heartbeat
-        /// </summary>
-        HeartbeatACK = 6,
-
-        /// <summary>
         /// Resume a connection
         /// </summary>
         Resume = 7,
@@ -51,10 +46,5 @@ namespace Vysn.Voice.Enums
         /// Acknowledge Resume
         /// </summary>
         Resumed = 9,
-
-        /// <summary>
-        /// A client has disconnected from the voice channel
-        /// </summary>
-        ClientDisconnect = 13
     }
 }
