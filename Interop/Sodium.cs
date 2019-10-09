@@ -6,7 +6,7 @@ namespace Vysn.Voice.Interop
     /// <summary>
     /// 
     /// </summary>
-    public struct Sodium
+    public readonly struct Sodium
     {
         /// <summary>
         /// 
@@ -68,38 +68,16 @@ namespace Vysn.Voice.Interop
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="source"></param>
-        /// <param name="target"></param>
-        /// <param name="nonce"></param>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public static bool TryEncrypt(ReadOnlySpan<byte> source, Span<byte> target, ReadOnlySpan<byte> nonce,
-            ReadOnlyMemory<byte> key)
-        {
-            if (nonce.Length != NonceSize)
-                throw new Exception($"Source nonce length ({nonce.Length}) didn't match {NonceSize} size.");
-
-            var targetExpected = MacSize + source.Length;
-            if (target.Length != targetExpected)
-                throw new Exception(
-                    $"Target length ({target.Length}) didn't match expected ({targetExpected}) length.");
-
-            if (key.Length != KeySize)
-                throw new Exception($"Input key's length ({key.Length}) doesn't match KeySize ({KeySize}) length.'");
-
-            int result;
-            if ((result = Encrypt(source, target, key.Span, nonce)) == 0)
-                return true;
-
-            throw new Exception($"Failed to encrypt buffer -> {result}");
-        }
+        /// <param name="buffer"></param>
+        public static void GenerateNonce(Span<byte> buffer)
+            => RandomBufferBytes(ref buffer.GetPinnableReference(), buffer.Length);
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="buffer"></param>
-        public static void GenerateRandomBytes(Span<byte> buffer)
-            => RandomBufferBytes(ref buffer.GetPinnableReference(), buffer.Length);
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public static int CalculateLength(ReadOnlySpan<byte> data)
+            => data.Length + MacSize;
     }
 }

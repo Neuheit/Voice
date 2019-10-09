@@ -26,19 +26,25 @@ namespace Vysn.Voice
 
                 case VoiceOpCode.Ready:
                     State = ConnectionState.Ready;
+
                     var readyPayload = arg.DeserializePayload<VoiceReadyPayload>();
+                    _audioEncoder.SetSSRC(readyPayload.SSRC);
+
                     await StartUdpConnectionAsync(readyPayload)
                         .ConfigureAwait(false);
+
                     break;
 
                 case VoiceOpCode.SessionDescription:
                     var sessionPayload = arg.DeserializePayload<SessionDescriptionPayload>();
+
                     if (sessionPayload.Mode != "xsalsa20_poly1305")
                     {
                         OnLog?.OnException($"{sessionPayload.Mode} mode isn't handled by Vysn.Voice.");
                         return;
                     }
 
+                    _audioEncoder.SetSecret(sessionPayload.SecretKey);
                     _ = SendKeepAliveAsync()
                         .ConfigureAwait(false);
                     break;

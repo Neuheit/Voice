@@ -30,6 +30,7 @@ namespace Vysn.Voice
         private readonly TimeSpan _connectionTimeout;
         private readonly CancellationTokenSource _connectionSource;
         private readonly UdpClient _udpClient;
+        private readonly AudioEncoder _audioEncoder;
 
         /// <summary>
         /// 
@@ -39,6 +40,7 @@ namespace Vysn.Voice
             _connectionTimeout = TimeSpan.FromSeconds(30);
             _connectionSource = new CancellationTokenSource();
             _udpClient = new UdpClient();
+            _audioEncoder = new AudioEncoder(_udpClient);
         }
 
         /// <summary>

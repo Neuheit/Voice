@@ -6,7 +6,7 @@ namespace Vysn.Voice.Payloads
     internal struct VoiceReadyPayload
     {
         [JsonPropertyName("ssrc")]
-        public int SSRC { get; set; }
+        public uint SSRC { get; set; }
 
         [JsonPropertyName("ip")]
         public string Address { get; set; }
