@@ -11,13 +11,13 @@ namespace Vysn.Voice
 {
     internal sealed class AudioEncoder
     {
+        private readonly ConcurrentQueue<VoicePacket> _packets;
         private readonly UdpClient _udpClient;
 
-        private uint _timestamp;
-        private ushort _sequence;
-        private uint _ssrc;
         private ReadOnlyMemory<byte> _secretKey;
-        private readonly ConcurrentQueue<VoicePacket> _packets;
+        private ushort _sequence;
+        public uint SSRC;
+        private uint _timestamp;
 
         public AudioEncoder(UdpClient udpClient)
         {
@@ -29,7 +29,7 @@ namespace Vysn.Voice
             => _secretKey = secret;
 
         public void SetSSRC(uint ssrc)
-            => _ssrc = ssrc;
+            => SSRC = ssrc;
 
         public void Encode(Span<byte> audioData)
         {
@@ -43,10 +43,12 @@ namespace Vysn.Voice
 
             BinaryPrimitives.WriteUInt16BigEndian(header.Slice(2), _sequence);  //    WHATS THIS?
             BinaryPrimitives.WriteUInt32BigEndian(header.Slice(4), _timestamp); //    CURRENT TIMESTAMP?
-            BinaryPrimitives.WriteUInt32BigEndian(header.Slice(8), _ssrc);
+            BinaryPrimitives.WriteUInt32BigEndian(header.Slice(8), SSRC);
 
             _sequence++;
             _timestamp += Opus.FRAME_SAMPLES;
+            
+            //TODO:    ENCODE WITH OPUS
 
             //    NONCE
             Span<byte> nonce = stackalloc byte[Sodium.NonceSize];

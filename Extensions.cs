@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Socks;
@@ -49,6 +50,15 @@ namespace Vysn.Voice
         {
             var deserialize = JsonSerializer.Deserialize<GatewayPayload<T>>(arg.Data.Span);
             return deserialize.Data;
+        }
+
+        //TODO: Write stream as span
+        public static void AsSpan(this Stream stream)
+        {
+            if (!stream.CanRead)
+                throw new Exception("Failed to convert stream to span. Sream cannot be read.");
+
+            Span<byte> temp = stackalloc byte[(int) stream.Length];
         }
     }
 }

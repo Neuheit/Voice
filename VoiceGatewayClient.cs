@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
@@ -7,33 +8,40 @@ using Socks;
 using Vysn.Commons;
 using Vysn.Voice.Enums;
 using Vysn.Voice.Packets;
+using Vysn.Voice.Payloads;
 
 namespace Vysn.Voice
 {
     /// <summary>
-    /// 
     /// </summary>
     public partial class VoiceGatewayClient : IAsyncDisposable
     {
         /// <summary>
-        /// 
+        /// </summary>
+        public event Func<LogMessage, Task> OnLog;
+
+        /// <summary>
         /// </summary>
         public ConnectionState State { get; private set; }
 
         /// <summary>
-        /// 
         /// </summary>
-        public event Func<LogMessage, Task> OnLog;
+        public Snowflake GuildId { get; private set; }
+
+        /// <summary>
+        /// </summary>
+        public Snowflake UserId { get; private set; }
+
+        private readonly AudioEncoder _audioEncoder;
+        private readonly CancellationTokenSource _connectionSource;
+
+        private readonly TimeSpan _connectionTimeout;
+        private readonly UdpClient _udpClient;
 
         private ClientSock _clientSock;
         private ConnectionPacket _connectionPacket;
-        private readonly TimeSpan _connectionTimeout;
-        private readonly CancellationTokenSource _connectionSource;
-        private readonly UdpClient _udpClient;
-        private readonly AudioEncoder _audioEncoder;
 
         /// <summary>
-        /// 
         /// </summary>
         public VoiceGatewayClient()
         {
@@ -41,17 +49,27 @@ namespace Vysn.Voice
             _connectionSource = new CancellationTokenSource();
             _udpClient = new UdpClient();
             _audioEncoder = new AudioEncoder(_udpClient);
+            State = ConnectionState.Disconnected;
+        }
+
+        /// <inheritdoc />
+        public async ValueTask DisposeAsync()
+        {
+            await _clientSock.DisposeAsync()
+                .ConfigureAwait(false);
         }
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="packet"></param>
         /// <returns></returns>
         public async Task RunAsync(ConnectionPacket packet)
         {
+            GuildId = packet.GuildId;
+            UserId = packet.UserId;
             _connectionPacket = packet;
-            OnLog?.OnDebug(JsonSerializer.Serialize(_connectionPacket));
+
+            OnLog?.OnDebug(JsonSerializer.Serialize(packet));
 
             var chopped = packet.Endpoint.AsSpan(0, packet.Endpoint.Length - 3)
                 .ToString();
@@ -73,32 +91,42 @@ namespace Vysn.Voice
             if (!isConnected)
             {
                 await DisposeAsync();
-                OnLog?.OnException($"Guild {_connectionPacket.GuildId} connection timed out after 30 seconds.");
+                OnLog?.OnException($"Guild {GuildId} connection timed out after 30 seconds.");
                 throw new TimeoutException("Failed to connect after waiting for 30 seconds.");
             }
 
-            OnLog?.OnDebug($"Guild {_connectionPacket.GuildId} voice connection established.");
+            OnLog?.OnInformation($"Guild {GuildId} voice connection established.");
 
             var isReady = SpinWait.SpinUntil(() => State == ConnectionState.Ready, _connectionTimeout);
             if (isReady)
             {
                 _ = _audioEncoder.TransmitPacketsAsync(_connectionSource);
+                OnLog?.OnDebug($"Started packet transmission for guild {GuildId}.");
             }
         }
 
         /// <summary>
-        /// 
         /// </summary>
         /// <returns></returns>
-        public async Task SendOpusAudioAsync()
+        public async Task SendAudioAsync(Stream stream)
         {
-        }
+            var payload = new GatewayPayload<SpeakingPayload>
+            {
+                Op = VoiceOpCode.Speaking,
+                Data = new SpeakingPayload
+                {
+                    Delay = 0,
+                    IsSpeaking = true,
+                    SSRC = _audioEncoder.SSRC
+                }
+            };
 
-        /// <inheritdoc />
-        public async ValueTask DisposeAsync()
-        {
-            await _clientSock.DisposeAsync()
+            await _clientSock.DebugSendAsync(OnLog, payload)
                 .ConfigureAwait(false);
+            
+            //TODO: Convert stream to Span<byte>? IMPL BELOW:
+            
+            
         }
     }
 }

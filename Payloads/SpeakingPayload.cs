@@ -11,6 +11,6 @@ namespace Vysn.Voice.Payloads
         public long Delay { get; set; }
 
         [JsonPropertyName("ssrc")]
-        public int SSRC { get; set; }
+        public uint SSRC { get; set; }
     }
 }

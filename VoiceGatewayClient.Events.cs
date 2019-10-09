@@ -9,39 +9,57 @@ using Vysn.Voice.Payloads;
 namespace Vysn.Voice
 {
     /// <summary>
-    /// 
     /// </summary>
     public partial class VoiceGatewayClient
     {
         private async Task OnConnectedAsync()
         {
-            State = ConnectionState.Connected;
-            var payload = new GatewayPayload<VoiceIdentifyPayload>
+            if (State == ConnectionState.Disconnected)
             {
-                Op = VoiceOpCode.Identify,
-                Data = new VoiceIdentifyPayload
+                State = ConnectionState.Connected;
+                var payload = new GatewayPayload<VoiceIdentifyPayload>
                 {
-                    ServerId = _connectionPacket.GuildId,
-                    SessionId = _connectionPacket.SessionId,
-                    UserId = _connectionPacket.UserId,
-                    Token = _connectionPacket.Token
-                }
-            };
+                    Op = VoiceOpCode.Identify,
+                    Data = new VoiceIdentifyPayload
+                    {
+                        ServerId = _connectionPacket.GuildId,
+                        SessionId = _connectionPacket.SessionId,
+                        UserId = _connectionPacket.UserId,
+                        Token = _connectionPacket.Token
+                    }
+                };
 
-            await _clientSock.DebugSendAsync(OnLog, payload)
-                .ConfigureAwait(false);
+                await _clientSock.DebugSendAsync(OnLog, payload)
+                    .ConfigureAwait(false);
+            }
+            else if (State == ConnectionState.ResumeWait)
+            {
+                var payload = new GatewayPayload<ResumeConnectionPayload>
+                {
+                    Op = VoiceOpCode.Resume,
+                    Data = new ResumeConnectionPayload
+                    {
+                        GuildId = GuildId,
+                        SessionId = _connectionPacket.SessionId,
+                        Token = _connectionPacket.Token
+                    }
+                };
+
+                await _clientSock.DebugSendAsync(OnLog, payload)
+                    .ConfigureAwait(false);
+            }
         }
 
         private async Task OnDisconnectedAsync(DisconnectEventArgs arg)
         {
-            OnLog?.OnWarning($"Guild {_connectionPacket.GuildId} voice connection dropped. Checking restore status..");
+            OnLog?.OnWarning($"Guild {GuildId} voice connection dropped. Checking restore status..");
 
             State = ConnectionState.Disconnected;
             if (arg.DisconnectType == DisconnectType.Graceful)
                 return;
 
             if (CanRestoreConnection(arg.Exception))
-                OnLog?.OnWarning($"Trying to restore guild {_connectionPacket.GuildId} voice connection.");
+                OnLog?.OnWarning($"Trying to restore guild {GuildId} voice connection.");
             else
                 OnLog?.OnException(exception: arg.Exception);
 
@@ -57,16 +75,17 @@ namespace Vysn.Voice
                     {
                         case 4014:
                             OnLog?.OnException(
-                                $"Guild {_connectionPacket.GuildId} deleted voice channel I was connected to.");
+                                $"Guild {GuildId} deleted voice channel I was connected to.");
                             return false;
 
                         case 4015:
-                            OnLog?.OnWarning($"Guild {_connectionPacket.GuildId} voice connection can be resumed.");
+                            State = ConnectionState.ResumeWait;
+                            OnLog?.OnWarning($"Guild {GuildId} voice connection can be resumed.");
                             return true;
 
                         case 10054:
                             OnLog?.OnException(
-                                $"Discord closed guild {_connectionPacket.GuildId} voice connection with code: 10054");
+                                $"Discord closed guild {GuildId} voice connection with code: 10054");
                             return false;
                     }
 

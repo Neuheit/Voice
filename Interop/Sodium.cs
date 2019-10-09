@@ -4,24 +4,20 @@ using System.Runtime.InteropServices;
 namespace Vysn.Voice.Interop
 {
     /// <summary>
-    /// 
     /// </summary>
     public readonly struct Sodium
     {
         /// <summary>
-        /// 
         /// </summary>
         public static readonly int NonceSize
             = (int) SecretBoxNonceSize();
 
         /// <summary>
-        /// 
         /// </summary>
         private static readonly int MacSize
             = (int) SecretBoxMacSize();
 
         /// <summary>
-        /// 
         /// </summary>
         private static readonly int KeySize
             = (int) SecretBoxKeySize();
@@ -48,7 +44,6 @@ namespace Vysn.Voice.Interop
         private static extern void RandomBytesBuffer(ref byte buf, int size);
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="destination"></param>
         /// <param name="audioData"></param>
@@ -78,14 +73,12 @@ namespace Vysn.Voice.Interop
         }
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="buffer"></param>
         public static void GenerateNonce(Span<byte> buffer)
             => RandomBytesBuffer(ref buffer.GetPinnableReference(), buffer.Length);
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>

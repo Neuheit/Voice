@@ -7,7 +7,7 @@ namespace Vysn.Voice.Payloads
     internal struct ResumeConnectionPayload
     {
         [JsonPropertyName("server_id"), JsonConverter(typeof(SnowflakeConverter))]
-        public Snowflake ServerId { get; set; }
+        public Snowflake GuildId { get; set; }
 
         [JsonPropertyName("session_id")]
         public string SessionId { get; set; }
