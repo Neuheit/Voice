@@ -1,5 +1,3 @@
-using System;
-
 namespace Vysn.Voice.Packets
 {
     /// <summary>
@@ -20,7 +18,7 @@ namespace Vysn.Voice.Packets
         /// <summary>
         /// 
         /// </summary>
-        public ReadOnlyMemory<byte> Data { get; }
+        public byte[] Data { get; }
 
         /// <summary>
         /// 
@@ -28,7 +26,7 @@ namespace Vysn.Voice.Packets
         /// <param name="duration"></param>
         /// <param name="isSilence"></param>
         /// <param name="data"></param>
-        public VoicePacket(int duration, bool isSilence, ReadOnlyMemory<byte> data)
+        public VoicePacket(int duration, bool isSilence, byte[] data)
         {
             Duration = duration;
             IsSilence = isSilence;
