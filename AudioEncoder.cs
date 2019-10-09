@@ -1,7 +1,11 @@
 using System;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using Vysn.Voice.Interop;
+using Vysn.Voice.Packets;
 
 namespace Vysn.Voice
 {
@@ -13,10 +17,12 @@ namespace Vysn.Voice
         private ushort _sequence;
         private uint _ssrc;
         private ReadOnlyMemory<byte> _secretKey;
+        private readonly ConcurrentQueue<VoicePacket> _packets;
 
         public AudioEncoder(UdpClient udpClient)
         {
             _udpClient = udpClient;
+            _packets = new ConcurrentQueue<VoicePacket>();
         }
 
         public void SetSecret(ReadOnlyMemory<byte> secret)
@@ -25,32 +31,47 @@ namespace Vysn.Voice
         public void SetSSRC(uint ssrc)
             => _ssrc = ssrc;
 
-        public void BuildPacket()
+        public void Encode(Span<byte> audioData)
         {
-            //    DUMMY
+            var calculatedLength = Sodium.CalculateLength(audioData);
+            Span<byte> destination = stackalloc byte[calculatedLength];
 
-            Span<byte> packet = stackalloc byte[1024];
-            WriteHeader(ref packet);
-            Encrypt(packet);
-        }
+            var header = destination.Slice(0, 12);
 
-        private void WriteHeader(ref Span<byte> packet)
-        {
-            packet[0] = 0x78; //    Version + Flags
-            packet[1] = 0x80; //    Payload Type
+            header[0] = 0x78; //    Version + Flags
+            header[1] = 0x80; //    Payload Type
 
-            BinaryPrimitives.WriteUInt16BigEndian(packet.Slice(2), _sequence);  //    WHATS THIS?
-            BinaryPrimitives.WriteUInt32BigEndian(packet.Slice(4), _timestamp); //    CURRENT TIMESTAMP?
-            BinaryPrimitives.WriteUInt32BigEndian(packet.Slice(8), _ssrc);
-        }
+            BinaryPrimitives.WriteUInt16BigEndian(header.Slice(2), _sequence);  //    WHATS THIS?
+            BinaryPrimitives.WriteUInt32BigEndian(header.Slice(4), _timestamp); //    CURRENT TIMESTAMP?
+            BinaryPrimitives.WriteUInt32BigEndian(header.Slice(8), _ssrc);
 
-        private void Encrypt(ReadOnlySpan<byte> data)
-        {
-            var requiredSpace = Sodium.CalculateLength(data);
+            _sequence++;
+            _timestamp += Opus.FRAME_SAMPLES;
 
-            //    NONCE STUFF
+            //    NONCE
             Span<byte> nonce = stackalloc byte[Sodium.NonceSize];
             Sodium.GenerateNonce(nonce.Slice(0, 4));
+
+            //    ENCRYPT
+            Sodium.Encrypt(destination.Slice(12), audioData, _secretKey.Span, nonce);
+            nonce.Slice(0, 4)
+                .CopyTo(destination);
+
+            //    Queue Packet
+            var packet = new VoicePacket(destination.Length, false, destination.ToArray());
+            _packets.Enqueue(packet);
+        }
+
+        public async Task TransmitPacketsAsync(CancellationTokenSource tokenSource)
+        {
+            while (!tokenSource.IsCancellationRequested)
+            {
+                if (!_packets.TryDequeue(out var packet))
+                    continue;
+
+                await _udpClient.SendAsync(packet.Data, packet.Duration)
+                    .ConfigureAwait(false);
+            }
         }
     }
 }
