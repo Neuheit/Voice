@@ -32,7 +32,7 @@ namespace Vysn.Voice.Interop.Opus
         private static extern unsafe int OpusEncode(IntPtr encoder, byte* pcm, int frameSize, byte* data,
             int maxDataBytes);
 
-        private readonly VoiceApplication _application;
+        private readonly IntPtr _opusEncoder;
 
         /// <summary>
         /// 
@@ -40,7 +40,10 @@ namespace Vysn.Voice.Interop.Opus
         /// <param name="application"></param>
         public OpusEncoder(VoiceApplication application)
         {
-            _application = application;
+            _opusEncoder = OpusCreateEncoder(SAMPLE_RATE, CHANNELS, (int) application, out var error);
+
+            if (error != OpusError.OK)
+                throw new Exception("Opus failed to create an encoder.");
         }
 
         /// <summary>
@@ -52,20 +55,15 @@ namespace Vysn.Voice.Interop.Opus
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public unsafe void Encode(Span<byte> audioData, Span<byte> destination)
         {
-            var encoder = OpusCreateEncoder(SAMPLE_RATE, CHANNELS, (int) _application, out var error);
-
-            if (error != OpusError.OK)
-                throw new Exception("Opus failed to create an encoder.");
-
-            if (destination.Length != audioData.Length)
-                throw new ArgumentOutOfRangeException("");
+            if (audioData.Length != destination.Length)
+                throw new ArgumentOutOfRangeException(nameof(audioData), "Doesn't match destination's length.");
 
             int length;
 
             fixed (byte* audioPtr = &audioData.GetPinnableReference())
             fixed (byte* destinationPtr = &destination.GetPinnableReference())
             {
-                length = OpusEncode(encoder, audioPtr, FRAME_SAMPLES, destinationPtr, destination.Length);
+                length = OpusEncode(_opusEncoder, audioPtr, FRAME_SAMPLES, destinationPtr, destination.Length);
             }
 
             if (length >= 0)
