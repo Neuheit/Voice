@@ -2,7 +2,7 @@ namespace Vysn.Voice.Enums
 {
     /// <summary>
     /// </summary>
-    public enum VoiceApplication
+    public enum VoiceApplication : int
     {
         /// <summary>
         /// </summary>

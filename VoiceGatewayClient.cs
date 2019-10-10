@@ -43,12 +43,12 @@ namespace Vysn.Voice
 
         /// <summary>
         /// </summary>
-        public VoiceGatewayClient()
+        public VoiceGatewayClient(VoiceConfiguration configuration)
         {
             _connectionTimeout = TimeSpan.FromSeconds(30);
             _connectionSource = new CancellationTokenSource();
             _udpClient = new UdpClient();
-            _audioEncoder = new AudioEncoder(_udpClient);
+            _audioEncoder = new AudioEncoder(_udpClient, configuration.Application);
             State = ConnectionState.Disconnected;
         }
 
@@ -123,10 +123,8 @@ namespace Vysn.Voice
 
             await _clientSock.DebugSendAsync(OnLog, payload)
                 .ConfigureAwait(false);
-            
+
             //TODO: Convert stream to Span<byte>? IMPL BELOW:
-            
-            
         }
     }
 }

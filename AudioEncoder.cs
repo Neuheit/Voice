@@ -4,7 +4,9 @@ using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Vysn.Voice.Enums;
 using Vysn.Voice.Interop;
+using Vysn.Voice.Interop.Opus;
 using Vysn.Voice.Packets;
 
 namespace Vysn.Voice
@@ -13,16 +15,18 @@ namespace Vysn.Voice
     {
         private readonly ConcurrentQueue<VoicePacket> _packets;
         private readonly UdpClient _udpClient;
+        private readonly OpusEncoder _opusEncoder;
 
         private ReadOnlyMemory<byte> _secretKey;
         private ushort _sequence;
         public uint SSRC;
         private uint _timestamp;
 
-        public AudioEncoder(UdpClient udpClient)
+        public AudioEncoder(UdpClient udpClient, VoiceApplication application)
         {
             _udpClient = udpClient;
             _packets = new ConcurrentQueue<VoicePacket>();
+            _opusEncoder = new OpusEncoder(application);
         }
 
         public void SetSecret(ReadOnlyMemory<byte> secret)
@@ -45,10 +49,12 @@ namespace Vysn.Voice
             BinaryPrimitives.WriteUInt32BigEndian(header.Slice(4), _timestamp); //    CURRENT TIMESTAMP?
             BinaryPrimitives.WriteUInt32BigEndian(header.Slice(8), SSRC);
 
-            _sequence++;
-            _timestamp += Opus.FRAME_SAMPLES;
+            //    OPUS ENCODE
+            var opusPacket = destination.Slice(12);
+            _opusEncoder.Encode(audioData, opusPacket);
             
-            //TODO:    ENCODE WITH OPUS
+            _sequence++;
+            _timestamp += OpusEncoder.FRAME_SAMPLES;
 
             //    NONCE
             Span<byte> nonce = stackalloc byte[Sodium.NonceSize];
