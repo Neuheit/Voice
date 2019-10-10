@@ -124,7 +124,7 @@ namespace Vysn.Voice
             await _clientSock.DebugSendAsync(OnLog, payload)
                 .ConfigureAwait(false);
 
-            //TODO: Convert stream to Span<byte>? IMPL BELOW:
+            _audioEncoder.Encode(stream.AsSpan());
         }
     }
 }

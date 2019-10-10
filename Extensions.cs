@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Socks;
 using Socks.EventArgs;
@@ -52,13 +53,25 @@ namespace Vysn.Voice
             return deserialize.Data;
         }
 
-        //TODO: Write stream as span
-        public static void AsSpan(this Stream stream)
+        public static Span<byte> AsSpan(this Stream stream)
         {
             if (!stream.CanRead)
                 throw new Exception("Failed to convert stream to span. Sream cannot be read.");
 
-            Span<byte> temp = stackalloc byte[(int) stream.Length];
+            Span<byte> buffer = stackalloc byte[(int) stream.Length];
+            var readBytes = 0;
+
+            while (buffer.Length != stream.Length)
+            {
+                var read = stream.Read(buffer.Slice(readBytes));
+                if (read == 0)
+                    break;
+
+                Volatile.Write(ref readBytes, read);
+            }
+
+            // TODO: MAKE IT PRETTY
+            return new Span<byte>(buffer.ToArray());
         }
     }
 }
