@@ -8,6 +8,6 @@ namespace Vysn.Voice.Payloads
         public string Mode { get; set; }
 
         [JsonPropertyName("secret_key")]
-        public byte[] SecretKey { get; set; }
+        public int[] SecretKey { get; set; }
     }
 }

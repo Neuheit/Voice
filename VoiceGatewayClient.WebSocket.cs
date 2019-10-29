@@ -44,21 +44,19 @@ namespace Vysn.Voice
                         return;
                     }
 
-                    _audioEncoder.SetSecret(sessionPayload.SecretKey);
+                    var result = new byte[sessionPayload.SecretKey.Length * sizeof(int)];
+                    Buffer.BlockCopy(sessionPayload.SecretKey, 0, result, 0, result.Length);
+                    
+                    _audioEncoder.SetSecret(result);
                     _ = SendKeepAliveAsync()
                         .ConfigureAwait(false);
 
                     State = ConnectionState.Ready;
                     break;
 
-                case VoiceOpCode.Resume:
-                    break;
-
                 case VoiceOpCode.Resumed:
+                    OnLog?.OnInformation("Session has been resumed.");
                     break;
-
-                default:
-                    throw new ArgumentOutOfRangeException($"Unknown op code: {payload.Op}");
             }
         }
 
