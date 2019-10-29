@@ -72,8 +72,13 @@ namespace Vysn.Voice
 
         public async Task TransmitPacketsAsync(CancellationTokenSource tokenSource)
         {
+            SpinWait.SpinUntil(() => !_packets.IsEmpty);
+            
             while (!tokenSource.IsCancellationRequested)
             {
+                if (_packets.IsEmpty)
+                    continue;
+                
                 if (!_packets.TryDequeue(out var packet))
                     continue;
 
