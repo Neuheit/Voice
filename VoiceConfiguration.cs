@@ -8,6 +8,6 @@ namespace Vysn.Voice
     {
         /// <summary>
         /// </summary>
-        public VoiceApplication Application { get; }
+        public VoiceApplication Application { get; set; }
     }
 }
