@@ -33,6 +33,7 @@ namespace Vysn.Voice
         public Snowflake UserId { get; private set; }
 
         private readonly AudioEncoder _audioEncoder;
+        private readonly AudioStream _audioStream;
         private readonly CancellationTokenSource _connectionSource;
 
         private readonly TimeSpan _connectionTimeout;
@@ -49,6 +50,7 @@ namespace Vysn.Voice
             _connectionSource = new CancellationTokenSource();
             _udpClient = new UdpClient();
             _audioEncoder = new AudioEncoder(_udpClient, configuration.Application);
+            _audioStream = new AudioStream(_audioEncoder);
             State = ConnectionState.Disconnected;
         }
 
@@ -71,9 +73,7 @@ namespace Vysn.Voice
 
             OnLog?.OnDebug(JsonSerializer.Serialize(packet));
 
-            var chopped = packet.Endpoint.AsSpan(0, packet.Endpoint.Length - 3)
-                .ToString();
-
+            var chopped = packet.Endpoint.Substring(0, packet.Endpoint.Length - 3);
             var endpoint = new Endpoint(chopped, true)
                 .WithParameter("encoding", "json")
                 .WithParameter("v", "3");
@@ -84,7 +84,7 @@ namespace Vysn.Voice
             _clientSock.OnConnected += OnConnectedAsync;
             _clientSock.OnDisconnected += OnDisconnectedAsync;
 
-            _ = _clientSock.ConnectAsync()
+            await _clientSock.ConnectAsync()
                 .ConfigureAwait(false);
 
             var isConnected = SpinWait.SpinUntil(() => State == ConnectionState.Connected, _connectionTimeout);
@@ -100,31 +100,70 @@ namespace Vysn.Voice
             var isReady = SpinWait.SpinUntil(() => State == ConnectionState.Ready, _connectionTimeout);
             if (isReady)
             {
-                _ = _audioEncoder.TransmitPacketsAsync(_connectionSource);
                 OnLog?.OnDebug($"Started packet transmission for guild {GuildId}.");
+                _ = _audioEncoder.TransmitPacketsAsync(_connectionSource);
             }
         }
 
         /// <summary>
+        /// 
         /// </summary>
+        /// <param name="stream"></param>
         /// <returns></returns>
-        public async Task SendAudioAsync(Stream stream)
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="InvalidOperationException"></exception>
+        public void SendAudioStream(Stream stream)
         {
+            if (stream == null)
+                throw new ArgumentNullException(nameof(stream));
+
+            if (!stream.CanRead)
+                throw new InvalidOperationException("Please make sure stream can be read.");
+
+            stream.CopyTo(_audioStream);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void SendNullPackets()
+        {
+            var frames = new[]
+            {
+                new byte[0xF8],
+                new byte[0xFF],
+                new byte[0xFE]
+            };
+
+            foreach (var frame in frames)
+                _audioEncoder.Encode(frame);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="isSpeaking"></param>
+        /// <param name="delay"></param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        public async Task SetSpeakingAsync(bool isSpeaking, TimeSpan delay)
+        {
+            if (State != ConnectionState.Connected)
+                throw new InvalidOperationException($"Can't send a payload when connection state is {State}.");
+
             var payload = new GatewayPayload<SpeakingPayload>
             {
                 Op = VoiceOpCode.Speaking,
                 Data = new SpeakingPayload
                 {
-                    Delay = 0,
-                    IsSpeaking = true,
+                    Delay = delay.Milliseconds,
+                    IsSpeaking = isSpeaking,
                     SSRC = _audioEncoder.SSRC
                 }
             };
 
             await _clientSock.DebugSendAsync(OnLog, payload)
                 .ConfigureAwait(false);
-
-            _audioEncoder.Encode(stream.AsSpan());
         }
     }
 }
